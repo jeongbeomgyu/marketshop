@@ -11,8 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.thymeleaf.util.StringUtils;
 
-import java.io.File;
-
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -34,16 +32,7 @@ public class ItemImgService {
 
         // 파일 업로드
         if (!StringUtils.isEmpty(oriImgName)) {
-            //실제 파일 저장 경로 생성
-            String uploadDir = itemImgLocation+ File.separator + "items";
-            File dir = new File(uploadDir);
-
-            //폴더 없으면 생성
-            if(!dir.exists()){
-                dir.mkdirs();
-            }
-
-            imgName = fileService.uploadFile(uploadDir, oriImgName, itemImgFile.getBytes());
+            imgName = fileService.uploadFile(itemImgLocation, oriImgName, itemImgFile.getBytes());
             imgUrl = "/images/item/" + imgName;
         }
 

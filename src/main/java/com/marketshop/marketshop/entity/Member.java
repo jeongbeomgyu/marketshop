@@ -1,6 +1,5 @@
 package com.marketshop.marketshop.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.marketshop.marketshop.constant.Role;
 import com.marketshop.marketshop.dto.MemberFormDto;
 import jakarta.persistence.*;
@@ -10,9 +9,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @Entity
 @Table(name = "member")
@@ -160,8 +157,4 @@ public class Member extends BaseEntity implements UserDetails {   // 회원 정�
     public void updateDetailAddress(String detailaddress) {
         this.detailaddress = detailaddress;
     }
-
-    @JsonIgnore
-    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<Wishlist> wishlistItems = new HashSet<>();
 }

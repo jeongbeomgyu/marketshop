@@ -7,7 +7,6 @@ import com.querydsl.core.types.dsl.*;
 import com.querydsl.core.types.PathMetadata;
 import javax.annotation.processing.Generated;
 import com.querydsl.core.types.Path;
-import com.querydsl.core.types.dsl.PathInits;
 
 
 /**
@@ -49,8 +48,6 @@ public class QMember extends EntityPathBase<Member> {
     public final EnumPath<com.marketshop.marketshop.constant.Role> role = createEnum("role", com.marketshop.marketshop.constant.Role.class);
 
     public final StringPath streetaddress = createString("streetaddress");
-
-    public final SetPath<Wishlist, QWishlist> wishlistItems = this.<Wishlist, QWishlist>createSet("wishlistItems", Wishlist.class, QWishlist.class, PathInits.DIRECT2);
 
     public QMember(String variable) {
         super(Member.class, forVariable(variable));
