@@ -48,4 +48,19 @@ public class ItemFormDto {
     public static ItemFormDto of(Item item) {
         return modelMapper.map(item, ItemFormDto.class);
     }
+
+    @Override
+    public String toString() {
+        return "ItemFormDto{" +
+                "id=" + id +
+                ", itemNm='" + itemNm + '\'' +
+                ", price=" + price +
+                ", itemDetail='" + itemDetail + '\'' +
+                ", stockNumber=" + stockNumber +
+                ", itemSellStatus=" + itemSellStatus +
+                ", itemCategory='" + itemCategory + '\'' +
+                ", itemImgDtoList=" + itemImgDtoList +
+                ", itemImgIds=" + itemImgIds +
+                '}';
+    }
 }
