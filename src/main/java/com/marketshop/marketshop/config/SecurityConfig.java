@@ -61,7 +61,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/css/**", "/js/**", "/img/**").permitAll() // 정적 리소스 허용
                         .requestMatchers("/", "/members/**", "/item/**", "/images/**", "/mail/**", "/search/**").permitAll()
-                        .requestMatchers("/admin/**").hasRole("ADMIN") // ADMIN 권한을 가진 사용자만 접근 가능
+                        .requestMatchers("/admin/**").hasRole("USER") // ADMIN 권한을 가진 사용자만 접근 가능
                         .anyRequest().authenticated() // 그 외 모든 요청은 인증 필요
                 )
 
