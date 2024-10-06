@@ -27,7 +27,7 @@ public class ItemImgService {
 
     private final FileService fileService;
 
-    public void saveItemImg(ItemImg itemImg, MultipartFile itemImgFile) throws Exception {
+    public ItemImg saveItemImg(ItemImg itemImg, MultipartFile itemImgFile) throws Exception {
         String oriImgName = itemImgFile.getOriginalFilename();
         String imgName = "";
         String imgUrl = "";
@@ -49,7 +49,7 @@ public class ItemImgService {
 
         // 상품 이미지 정보 저장
         itemImg.updateItemImg(oriImgName, imgName, imgUrl);
-        itemImgRepository.save(itemImg);
+        return itemImgRepository.save(itemImg);
     }
 
     public void updateItemImg(Long itemImgId, MultipartFile itemImgFile) throws Exception{
