@@ -269,7 +269,7 @@ public class MemberController {
 
     // React 와 연동 가능한 비밀번호 확인
     @GetMapping("/checkPwd")
-    public ResponseEntity<Boolean> checkPassword(Principal principal, @RequestParam String checkPassword) {
+    public ResponseEntity<Boolean> checkPassword(Principal principal, @RequestParam("checkPassword") String checkPassword) {
         String loginId = principal.getName();
         Member member = memberRepository.findByEmail(loginId);
 
