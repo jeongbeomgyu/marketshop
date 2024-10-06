@@ -17,7 +17,9 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Controller
@@ -26,14 +28,9 @@ public class OrderController {
 
     private final OrderService orderService;
 
-    @GetMapping(value = "/orderConfirm")
-    public String orderConfirm(Model model) {
-        return "order/orderConfirm";
-    }
-
     // 구매 PostMapping
     @PostMapping(value = "/order")
-    public @ResponseBody ResponseEntity order(@RequestBody @Valid OrderDto orderDto, BindingResult bindingResult, Principal principal) {
+    public ResponseEntity<?> order(@RequestBody @Valid OrderDto orderDto, BindingResult bindingResult, Principal principal) {
         if (bindingResult.hasErrors()) {
             StringBuilder sb = new StringBuilder();
             List<FieldError> fieldErrors = bindingResult.getFieldErrors();
@@ -42,7 +39,7 @@ public class OrderController {
                 sb.append(fieldError.getDefaultMessage());
             }
 
-            return new ResponseEntity<String>(sb.toString(), HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(sb.toString(), HttpStatus.BAD_REQUEST);
         }
 
         String email = principal.getName();
@@ -51,36 +48,37 @@ public class OrderController {
         try {
             orderId = orderService.order(orderDto, email);
         } catch (Exception e) {
-            return new ResponseEntity<String>(e.getMessage(), HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
 
-        return new ResponseEntity<Long>(orderId, HttpStatus.OK);
+        return new ResponseEntity<>(orderId, HttpStatus.OK); // 성공시 주문 ID를 JSON으로 반환
     }
 
     // 구매 이력
     @GetMapping(value = {"/orders", "/orders/{page}"})
-    public String orderHist(@PathVariable("page")Optional<Integer> page, Principal principal, Model model) {
+    public ResponseEntity<?> orderHist(@PathVariable("page") Optional<Integer> page, Principal principal) {
 
-        Pageable pageable = PageRequest.of(page.isPresent() ? page.get() : 0,4);
+        Pageable pageable = PageRequest.of(page.orElse(0), 4); // 기본 페이지는 0, 4개씩 가져옴
         Page<OrderHistDto> orderHistDtoList = orderService.getOrderList(principal.getName(), pageable);
 
-        model.addAttribute("orders", orderHistDtoList);
-        model.addAttribute("page", pageable.getPageNumber());
-        model.addAttribute("maxPage", 5);
+        Map<String, Object> response = new HashMap<>();
+        response.put("orders", orderHistDtoList.getContent()); // 주문 리스트
+        response.put("page", pageable.getPageNumber()); // 현재 페이지
+        response.put("totalPages", orderHistDtoList.getTotalPages()); // 총 페이지 수
 
-        return "order/orderHist";
+        return new ResponseEntity<>(response, HttpStatus.OK); // 페이징 정보와 주문 데이터를 JSON으로 반환
     }
 
     // 구매 이력에서 주문 취소
     @PostMapping("/order/{orderId}/cancel")
-    public @ResponseBody ResponseEntity cancelOrder(@PathVariable("orderId") Long orderId , Principal principal){
+    public ResponseEntity<?> cancelOrder(@PathVariable("orderId") Long orderId, Principal principal){
 
         if(!orderService.validateOrder(orderId, principal.getName())){
-            return new ResponseEntity<String>("주문 취소 권한이 없습니다.", HttpStatus.FORBIDDEN);
+            return new ResponseEntity<>("주문 취소 권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
 
         orderService.cancelOrder(orderId);
-        return new ResponseEntity<Long>(orderId, HttpStatus.OK);
+        return new ResponseEntity<>(orderId, HttpStatus.OK); // 취소된 주문 ID를 JSON으로 반환
     }
 
 }
