@@ -52,20 +52,38 @@ public class ItemImgService {
         return itemImgRepository.save(itemImg);
     }
 
-    public void updateItemImg(Long itemImgId, MultipartFile itemImgFile) throws Exception{
+    public void updateItemImg(Long itemImgId, MultipartFile itemImgFile) throws Exception {
         if (!itemImgFile.isEmpty()) {
-            ItemImg saveItemImg = itemImgRepository.findById(itemImgId)     // 상품 이미지 아이디를 이용하여 기존에 저장했던 상품 이미지 엔티티 조회
+            ItemImg saveItemImg = itemImgRepository.findById(itemImgId)
                     .orElseThrow(EntityNotFoundException::new);
 
             // 기존 이미지 파일 삭제
-            if(!StringUtils.isEmpty(saveItemImg.getImgName())) {
-                fileService.deleteFile(itemImgLocation + "/" + saveItemImg.getImgName());
+            if (!StringUtils.isEmpty(saveItemImg.getImgName())) {
+                fileService.deleteFile(itemImgLocation + "/item/" + saveItemImg.getImgName());
             }
 
+            // 파일 저장 경로 설정
+            String uploadDir = itemImgLocation + File.separator + "item";
+            File dir = new File(uploadDir);
+
             String oriImgName = itemImgFile.getOriginalFilename();
-            String imgName = fileService.uploadFile(itemImgLocation, oriImgName, itemImgFile.getBytes());
+            String imgName = fileService.uploadFile(uploadDir, oriImgName, itemImgFile.getBytes());
             String imgUrl = "/images/item/" + imgName;
+
             saveItemImg.updateItemImg(oriImgName, imgName, imgUrl); // 변경된 상품 이미지 정보 세팅
         }
+    }
+
+    // 상품 삭제
+    public void deleteItemImg(Long itemImgId) throws Exception {
+        ItemImg itemImg = itemImgRepository.findById(itemImgId)
+                .orElseThrow(EntityNotFoundException::new);
+
+        // 기존 이미지 파일 삭제
+        if (!StringUtils.isEmpty(itemImg.getImgName())) {
+            fileService.deleteFile(itemImgLocation + "/items" + itemImg.getImgName());
+        }
+
+        itemImgRepository.delete(itemImg);
     }
 }
