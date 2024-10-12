@@ -39,6 +39,9 @@ public class ItemFormDto {
 
     private List<Long> itemImgIds = new ArrayList<>();      // 상품 이미지 ID 를 저장하는 리스트
 
+    private Long memberId;  // 판매자 ID 필드 추가
+
+
     private static ModelMapper modelMapper = new ModelMapper();
 
     public Item createItem() {
@@ -63,4 +66,5 @@ public class ItemFormDto {
                 ", itemImgIds=" + itemImgIds +
                 '}';
     }
+
 }
