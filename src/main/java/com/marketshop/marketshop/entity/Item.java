@@ -48,6 +48,10 @@ public class Item extends BaseEntity{
 
     private LocalDateTime regTime;
 
+    @ManyToOne(fetch = FetchType.LAZY) // 어떤 멤버가 만들었는지 (판매자)
+    @JoinColumn(name = "member_id")
+    @JsonIgnore
+    private Member member;
 
     @Column(name = "wishlist_count", nullable = false)
     private int wishlistCount = 0;
