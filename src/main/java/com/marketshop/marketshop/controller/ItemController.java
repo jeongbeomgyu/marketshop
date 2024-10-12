@@ -3,7 +3,10 @@ package com.marketshop.marketshop.controller;
 import com.marketshop.marketshop.dto.ItemFormDto;
 import com.marketshop.marketshop.dto.ItemSearchDto;
 import com.marketshop.marketshop.entity.Item;
+import com.marketshop.marketshop.entity.Member;
+import com.marketshop.marketshop.service.ChatRoomService;
 import com.marketshop.marketshop.service.ItemService;
+import com.marketshop.marketshop.service.MemberService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +21,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,6 +30,10 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class ItemController {
     private final ItemService itemService;
+    private final MemberService memberService;
+    private final ChatRoomService chatRoomService;
+
+
 
     // 상품 등록 페이지 데이터
     @GetMapping("/admin/item/new")
@@ -38,7 +46,8 @@ public class ItemController {
     public ResponseEntity<?> createItem(
             @Valid @ModelAttribute ItemFormDto itemFormDto,
             BindingResult bindingResult,
-            @RequestParam("itemImgFile") List<MultipartFile> itemImgFileList) {
+            @RequestParam("itemImgFile") List<MultipartFile> itemImgFileList,
+            Principal principal) {
 
         if (bindingResult.hasErrors()) {
             return ResponseEntity.badRequest().body(bindingResult.getAllErrors());
@@ -49,7 +58,9 @@ public class ItemController {
         }
 
         try {
-            itemService.saveItem(itemFormDto, itemImgFileList);
+            // 인증된 사용자의 이메일을 전달하여 아이템과 연관
+            String memberEmail = principal.getName();
+            itemService.saveItem(itemFormDto, itemImgFileList, memberEmail);
             return ResponseEntity.ok("상품이 성공적으로 등록되었습니다.");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("상품 등록 중 에러가 발생하였습니다.");
@@ -61,6 +72,8 @@ public class ItemController {
     public ResponseEntity<?> getItemDetails(@PathVariable("itemId") Long itemId) {
         try {
             ItemFormDto itemFormDto = itemService.getItemDtl(itemId);
+            Member seller = memberService.findMemberById(itemFormDto.getMemberId()); // 판매자 정보 조회
+            itemFormDto.setMemberId(seller.getId()); // 판매자 이름을 추가로 세팅
             return ResponseEntity.ok(itemFormDto);
         } catch (EntityNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("존재하지 않는 상품입니다.");
@@ -139,6 +152,19 @@ public class ItemController {
             return ResponseEntity.ok(itemFormDto);
         } catch (EntityNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("존재하지 않는 상품입니다.");
+        }
+    }
+
+    // 상품 삭제
+    @PostMapping("/admin/item/delete/{itemId}")
+    public ResponseEntity<Void> deleteItem(@PathVariable("itemId") Long itemId) {
+        try {
+            itemService.deleteitem(itemId);
+            return ResponseEntity.noContent().build();
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
     }
 }
