@@ -12,10 +12,7 @@ packaging: jar
 
 DB: mysql 8.0.36
 
-<<<<<<< HEAD
-=======
 
->>>>>>> 6564c08027a17aeab68d7916a974474ee8791116
 #라이브러리
 ---
 JPA
@@ -30,6 +27,6 @@ Querydsl
 
 #API
 ---
-Swagger V3 (Springdoc) (예정)
+Swagger V3 (Springdoc)
 
 http://localhost:8080/swagger-ui/index.html
