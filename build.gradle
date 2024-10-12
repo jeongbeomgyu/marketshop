@@ -74,6 +74,9 @@ dependencies {
 	//stomp
 	implementation 'org.webjars:stomp-websocket:2.3.4'
 
+	// Swagger API 의존성 추가
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
+
 }
 
 tasks.named('test') {
