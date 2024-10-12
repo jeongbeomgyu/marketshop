@@ -112,4 +112,19 @@ public class MemberService implements UserDetailsService {
                 .roles(member.getRole().toString())
                 .build();
     }
+
+    public Member findByEmail(String email) {
+        Member member = memberRepository.findByEmail(email);
+        if (member == null) {
+            throw new UsernameNotFoundException("해당 이메일의 회원을 찾을 수 없습니다.");
+        }
+        return member;
+    }
+
+    public Member findMemberById(Long memberId) {
+        return memberRepository.findById(memberId).orElseThrow(() ->
+                new IllegalArgumentException("해당 아이디의 회원을 찾을 수 없습니다.")
+        );
+    }
+
 }
