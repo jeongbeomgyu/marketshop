@@ -6,6 +6,7 @@ import com.marketshop.marketshop.dto.ItemSearchDto;
 import com.marketshop.marketshop.dto.MainItemDto;
 import com.marketshop.marketshop.entity.Item;
 import com.marketshop.marketshop.entity.ItemImg;
+import com.marketshop.marketshop.entity.Member;
 import com.marketshop.marketshop.repository.ItemImgRepository;
 import com.marketshop.marketshop.repository.ItemRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -30,8 +31,16 @@ public class ItemService {
 
     private final ItemImgRepository itemImgRepository;
 
-    public Long saveItem(ItemFormDto itemFormDto, List<MultipartFile> itemImgFileList) throws Exception {
+    private final MemberService memberService;
+
+    public Long saveItem(ItemFormDto itemFormDto, List<MultipartFile> itemImgFileList, String memberEmail) throws Exception {
+        // 이메일로 인증된 회원을 가져옴
+        Member member = memberService.findByEmail(memberEmail); // 회원을 직접 반환
+
+        // 아이템을 생성하고 회원과 연관시킴
         Item item = itemFormDto.createItem();
+        item.setMember(member); // 아이템에 해당 회원을 설정
+
         itemRepository.save(item);
 
         for (int i = 0; i < itemImgFileList.size(); i++) {
@@ -117,6 +126,17 @@ public class ItemService {
     @Transactional(readOnly = true)
     public Page<MainItemDto> getMainItemPage(ItemSearchDto itemSearchDto, Pageable pageable){
         return itemRepository.getMainItemPage(itemSearchDto, pageable);
+    }
+
+    // 상품 삭제
+    public void deleteitem(Long itemId) throws Exception {
+        Item item = itemRepository.findById(itemId).orElseThrow(EntityNotFoundException::new);
+        List<ItemImg> itemImgList = itemImgRepository.findByItemIdOrderByIdAsc(itemId);
+
+        for (ItemImg itemImg : itemImgList) {
+            itemImgService.deleteItemImg(itemImg.getId());
+        }
+        itemRepository.delete(item);
     }
 
 }
