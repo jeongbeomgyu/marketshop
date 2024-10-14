@@ -1,7 +1,9 @@
 package com.marketshop.marketshop.controller;
 
+import com.marketshop.marketshop.config.JwtTokenProvider;
 import com.marketshop.marketshop.config.auth.PrincipalDetails;
 import com.marketshop.marketshop.constant.Role;
+import com.marketshop.marketshop.dto.LoginRequest;
 import com.marketshop.marketshop.dto.MailDto;
 import com.marketshop.marketshop.dto.MemberFormDto;
 import com.marketshop.marketshop.dto.MemberUpdateDto;
@@ -12,8 +14,11 @@ import com.marketshop.marketshop.service.MemberService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
@@ -30,16 +35,17 @@ import java.util.Objects;
 import static com.marketshop.marketshop.constant.Role.*;
 
 @RequestMapping("/members")
-@Controller
+@RestController
 @RequiredArgsConstructor
 public class MemberController {
 
     @Autowired
     private MemberRepository memberRepository;
-
     private final MailService mailService;
     private final MemberService memberService;
     private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
+
 
     // 회원가입 페이지로 이동할 수 있는 메소드
     @GetMapping(value = "/new")
@@ -48,32 +54,66 @@ public class MemberController {
         return "member/memberForm";
     }
 
+
     @GetMapping(value = "/select")
     public String memberSelect(Model model) {
         return "member/memberTypeSelectForm";
     }
 
     // 회원가입 PostMapping
-    @PostMapping(value = "/new")
-    public String memberForm(@Valid MemberFormDto memberFormDto, BindingResult bindingResult, Model model) {
+//    @PostMapping(value = "/new")
+//    public String memberForm(@Valid MemberFormDto memberFormDto, BindingResult bindingResult, Model model) {
+//
+//        if (bindingResult.hasErrors()) {
+//            return "member/memberForm";
+//        }
+//        try {
+//            Member member = Member.createMember(memberFormDto, passwordEncoder);
+//            memberService.saveMember(member);
+//        } catch (IllegalStateException e) {
+//            model.addAttribute("errorMessage", e.getMessage());
+//            return "member/memberForm";
+//        }
+//        return "redirect:/";
+//    }
 
+    // React 와 연동 가능하도록 회원 가입 변경
+    @PostMapping(value = "/new", produces = "application/json")
+    public ResponseEntity<?> memberForm(@Valid @RequestBody MemberFormDto memberFormDto, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
-            return "member/memberForm";
+            return ResponseEntity.badRequest().body(bindingResult.getAllErrors());
         }
         try {
             Member member = Member.createMember(memberFormDto, passwordEncoder);
             memberService.saveMember(member);
+            return ResponseEntity.ok("Member created successfully");
         } catch (IllegalStateException e) {
-            model.addAttribute("errorMessage", e.getMessage());
-            return "member/memberForm";
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
-        return "redirect:/";
     }
 
+
     // 로그인
-    @GetMapping(value = "/login")
-    public String loginMember() {
-        return "/member/memberLoginForm";
+//    @GetMapping(value = "/login")
+//    public String loginMember() {
+//        return "/member/memberLoginForm";
+//    }
+
+    // React 와 연동 가능하도록 회원 로그인 처리
+    @PostMapping(value = "/login", produces = "application/json")
+    public ResponseEntity<?> loginMember(@RequestBody LoginRequest loginRequest) {
+        try {
+            // 로그인 로직 처리 (인증 처리)
+            UserDetails userDetails = memberService.authenticateUser(loginRequest);
+
+            // JWT 토큰 생성
+            String token = jwtTokenProvider.generateToken(userDetails.getUsername());
+
+            // 응답으로 JWT 토큰 반환
+            return ResponseEntity.ok().body(Map.of("token", token));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+        }
     }
 
 
@@ -127,10 +167,24 @@ public class MemberController {
 
 
     // 관리자 회원가입
-    @GetMapping(value = "/newAdmin")                 // 회원가입 페이지로 이동할 수 있도록 메소드 작성
-    public String adminMemberForm(Model model) {
-        model.addAttribute("memberFormDto", new MemberFormDto());
-        return "member/memberForm";
+//    @GetMapping(value = "/newAdmin")                 // 회원가입 페이지로 이동할 수 있도록 메소드 작성
+//    public String adminMemberForm(Model model) {
+//        model.addAttribute("memberFormDto", new MemberFormDto());
+//        return "member/memberForm";
+//    }
+    // React 와 연동 가능한 관리자 회원가입
+    @PostMapping(value = "/newAdmin", produces = "application/json")
+    public ResponseEntity<?> registerAdmin(@Valid @RequestBody MemberFormDto memberFormDto, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return ResponseEntity.badRequest().body(bindingResult.getAllErrors());
+        }
+        try {
+            Member member = Member.createAdminMember(memberFormDto, passwordEncoder);
+            memberService.saveMember(member);
+            return ResponseEntity.ok().body("Admin registered successfully.");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     // 관리자 회원가입 PostMapping
@@ -154,26 +208,44 @@ public class MemberController {
     }
 
     // 마이페이지 구현 -> 회원정보 조회
-    @GetMapping("/myInfo")
-    public String memberInfo(Principal principal, ModelMap modelMap, Member member) {
-        String loginId = principal.getName();
-        Member memberId = memberRepository.findByEmail(loginId);
-        modelMap.addAttribute("member", memberId);
+//    @GetMapping("/myInfo")
+//    public String memberInfo(Principal principal, ModelMap modelMap, Member member) {
+//        String loginId = principal.getName();
+//        Member memberId = memberRepository.findByEmail(loginId);
+//        modelMap.addAttribute("member", memberId);
+//
+//        if (memberId.getRole() == USER) {
+//            System.out.println("USER LONGIN");
+//            return "mypage/FormMemberMyInfo";
+//        }
+//        if (memberId.getRole() == ADMIN) {
+//            System.out.println("ADMIN LOGIN");
+//            return "mypage/FormMemberMyInfo";
+//        }
+//        if (memberId.getRole() == SOCIAL) {
+//            System.out.println("SOCIAL LOGIN");
+//            return "mypage/OAuthMemberMyInfo";
+//        }
+//        return "null";
+//    }
 
-        if (memberId.getRole() == USER) {
-            System.out.println("USER LONGIN");
-            return "mypage/FormMemberMyInfo";
+    // React 와 연동 가능하도록 회원 정보 조회
+    @GetMapping("/myInfo")
+    public ResponseEntity<?> memberInfo(Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized access");
         }
-        if (memberId.getRole() == ADMIN) {
-            System.out.println("ADMIN LOGIN");
-            return "mypage/FormMemberMyInfo";
+
+        String loginId = principal.getName();
+        Member member = memberRepository.findByEmail(loginId);
+
+        if (member == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Member not found");
         }
-        if (memberId.getRole() == SOCIAL) {
-            System.out.println("SOCIAL LOGIN");
-            return "mypage/OAuthMemberMyInfo";
-        }
-        return "null";
+
+        return ResponseEntity.ok(member);
     }
+
 
     // 회원 수정하기 전 비밀번호 확인
     @GetMapping("/checkPwdForm")
@@ -181,17 +253,32 @@ public class MemberController {
         return "member/passwordCheckForm";
     }
 
+    // 비밀번호 확인
+//    @GetMapping("/checkPwd")
+//    @ResponseBody
+//    public boolean checkPassword(Principal principal, Member member,
+//                                 @RequestParam String checkPassword,
+//                                 Model model){
+//
+//        String loginId = principal.getName();
+//
+//        Member memberId = memberRepository.findByEmail(loginId);
+//        System.out.println(memberId.getPassword());
+//        return memberService.checkPassword(memberId, checkPassword);
+//    }
+
+    // React 와 연동 가능한 비밀번호 확인
     @GetMapping("/checkPwd")
-    @ResponseBody
-    public boolean checkPassword(Principal principal, Member member,
-                                 @RequestParam String checkPassword,
-                                 Model model){
-
+    public ResponseEntity<Boolean> checkPassword(Principal principal, @RequestParam("checkPassword") String checkPassword) {
         String loginId = principal.getName();
+        Member member = memberRepository.findByEmail(loginId);
 
-        Member memberId = memberRepository.findByEmail(loginId);
-        System.out.println(memberId.getPassword());
-        return memberService.checkPassword(memberId, checkPassword);
+        if (member == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(false);
+        }
+
+        boolean isPasswordCorrect = memberService.checkPassword(member, checkPassword);
+        return ResponseEntity.ok(isPasswordCorrect);
     }
 
 
@@ -202,25 +289,51 @@ public class MemberController {
     }
 
     // 비밀번호 찾기 시, 임시 비밀번호 담긴 이메일 보내기
+//    @Transactional
+//    @PostMapping("/sendEmail")
+//    public String sendEmail(@RequestParam("memberEmail") String memberEmail){
+//        MailDto dto = mailService.createMailAndChangePassword(memberEmail);
+//        mailService.mailSend(dto);
+//
+//        return "member/memberLoginForm";
+//    }
+
+    // React 와 연동 가능한 비밀번호 찾기 시, 임시 비밀번호 담긴 이메일 보내기
     @Transactional
     @PostMapping("/sendEmail")
-    public String sendEmail(@RequestParam("memberEmail") String memberEmail){
-        MailDto dto = mailService.createMailAndChangePassword(memberEmail);
-        mailService.mailSend(dto);
-
-        return "member/memberLoginForm";
+    public ResponseEntity<?> sendEmail(@RequestParam("memberEmail") String memberEmail) {
+        try {
+            MailDto dto = mailService.createMailAndChangePassword(memberEmail);
+            mailService.mailSend(dto);
+            return ResponseEntity.ok("Email sent successfully.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error sending email.");
+        }
     }
 
+
     // 회원 아이디 찾기
-    @RequestMapping(value = "/findId", method = RequestMethod.POST)
+//    @RequestMapping(value = "/findId", method = RequestMethod.POST)
+//    @ResponseBody
+//    public String findId(@RequestParam("memberEmail") String memberEmail) {
+//        String email = String.valueOf(memberRepository.findByEmail(memberEmail));
+//        System.out.println("회원 이메일 = " + email);
+//        if(email == null) {
+//            return null;
+//        } else {
+//            return email;
+//        }
+//    }
+
+    // React 와 연동 가능한 회원 아이디 찾기
+    @PostMapping("/findId")
     @ResponseBody
-    public String findId(@RequestParam("memberEmail") String memberEmail) {
+    public ResponseEntity<?> findId(@RequestParam("memberEmail") String memberEmail) {
         String email = String.valueOf(memberRepository.findByEmail(memberEmail));
-        System.out.println("회원 이메일 = " + email);
         if(email == null) {
-            return null;
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Email not found.");
         } else {
-            return email;
+            return ResponseEntity.ok(email);
         }
     }
 
@@ -235,10 +348,22 @@ public class MemberController {
     }
 
     // 회원 정보 변경
-    @PostMapping(value = "/updateForm")
-    public String updateMember(@Valid MemberUpdateDto memberUpdateDto, Model model) {
-        model.addAttribute("member", memberUpdateDto);
-        memberService.updateMember(memberUpdateDto);
-        return "redirect:/members/myInfo";
+//    @PostMapping(value = "/updateForm")
+//    public String updateMember(@Valid MemberUpdateDto memberUpdateDto, Model model) {
+//        model.addAttribute("member", memberUpdateDto);
+//        memberService.updateMember(memberUpdateDto);
+//        return "redirect:/members/myInfo";
+//    }
+
+    // React 와 연동 가능한 회원 정보 변경
+    // 회원 정보 변경
+    @PutMapping("/updateForm")
+    public ResponseEntity<?> updateMember(@Valid @RequestBody MemberUpdateDto memberUpdateDto) {
+        try {
+            memberService.updateMember(memberUpdateDto);
+            return ResponseEntity.ok("Member updated successfully.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

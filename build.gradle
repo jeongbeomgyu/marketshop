@@ -59,6 +59,24 @@ dependencies {
 	// Google 이메일 인증
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
 
+
+	// JWT
+	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+	implementation 'io.jsonwebtoken:jjwt-impl:0.11.5'
+	implementation 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+	implementation 'javax.xml.bind:jaxb-api:2.3.1'
+	implementation 'org.glassfish.jaxb:jaxb-runtime:2.3.1'
+
+	// websocket
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
+	//sockjs
+	implementation 'org.webjars:sockjs-client:1.5.1'
+	//stomp
+	implementation 'org.webjars:stomp-websocket:2.3.4'
+
+	// Swagger API 의존성 추가
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
+
 }
 
 tasks.named('test') {
@@ -77,4 +95,6 @@ tasks.withType(JavaCompile) {
 sourceSets {
 	main.java.srcDirs += [ generated ]
 }
-
+tasks.withType(JavaCompile) {
+	options.compilerArgs << "-parameters"
+}

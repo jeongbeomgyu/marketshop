@@ -39,6 +39,9 @@ public class ItemFormDto {
 
     private List<Long> itemImgIds = new ArrayList<>();      // 상품 이미지 ID 를 저장하는 리스트
 
+    private Long memberId;  // 판매자 ID 필드 추가
+
+
     private static ModelMapper modelMapper = new ModelMapper();
 
     public Item createItem() {
@@ -48,4 +51,20 @@ public class ItemFormDto {
     public static ItemFormDto of(Item item) {
         return modelMapper.map(item, ItemFormDto.class);
     }
+
+    @Override
+    public String toString() {
+        return "ItemFormDto{" +
+                "id=" + id +
+                ", itemNm='" + itemNm + '\'' +
+                ", price=" + price +
+                ", itemDetail='" + itemDetail + '\'' +
+                ", stockNumber=" + stockNumber +
+                ", itemSellStatus=" + itemSellStatus +
+                ", itemCategory='" + itemCategory + '\'' +
+                ", itemImgDtoList=" + itemImgDtoList +
+                ", itemImgIds=" + itemImgIds +
+                '}';
+    }
+
 }

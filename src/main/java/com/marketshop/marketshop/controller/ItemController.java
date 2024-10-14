@@ -3,119 +3,168 @@ package com.marketshop.marketshop.controller;
 import com.marketshop.marketshop.dto.ItemFormDto;
 import com.marketshop.marketshop.dto.ItemSearchDto;
 import com.marketshop.marketshop.entity.Item;
+import com.marketshop.marketshop.entity.Member;
+import com.marketshop.marketshop.service.ChatRoomService;
 import com.marketshop.marketshop.service.ItemService;
+import com.marketshop.marketshop.service.MemberService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.security.Principal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
-@Controller
+@RestController
 @RequiredArgsConstructor
 public class ItemController {
     private final ItemService itemService;
+    private final MemberService memberService;
+    private final ChatRoomService chatRoomService;
+
+
+
+    // 상품 등록 페이지 데이터
+    @GetMapping("/admin/item/new")
+    public ResponseEntity<ItemFormDto> getItemForm() {
+        return ResponseEntity.ok(new ItemFormDto());
+    }
 
     // 상품 등록
-    @GetMapping(value = "/admin/item/new")
-    public String itemForm(Model model) {
-        model.addAttribute("itemFormDto", new ItemFormDto());
-        return "item/itemForm";
-    }
+    @PostMapping("/admin/item/new")
+    public ResponseEntity<?> createItem(
+            @Valid @ModelAttribute ItemFormDto itemFormDto,
+            BindingResult bindingResult,
+            @RequestParam("itemImgFile") List<MultipartFile> itemImgFileList,
+            Principal principal) {
 
-    @PostMapping(value = "/admin/item/new")
-    public String itemNew(@Valid ItemFormDto itemFormDto, BindingResult bindingResult, Model model,@RequestParam("itemImgFile") List<MultipartFile> itemImgFileList) {
         if (bindingResult.hasErrors()) {
-            return "item/itemForm";
+            return ResponseEntity.badRequest().body(bindingResult.getAllErrors());
         }
 
-        if (itemImgFileList.get(0).isEmpty() && itemFormDto.getId() == null) {
-            model.addAttribute("errorMessage", "첫번째 상품 이미지는 필수 입력 값 입니다.");
-            return "item/itemForm";
+        if (itemImgFileList.isEmpty() || (itemImgFileList.get(0).isEmpty() && itemFormDto.getId() == null)) {
+            return ResponseEntity.badRequest().body("첫번째 상품 이미지는 필수 입력 값입니다.");
         }
 
         try {
-            itemService.saveItem(itemFormDto, itemImgFileList);
+            // 인증된 사용자의 이메일을 전달하여 아이템과 연관
+            String memberEmail = principal.getName();
+            itemService.saveItem(itemFormDto, itemImgFileList, memberEmail);
+            return ResponseEntity.ok("상품이 성공적으로 등록되었습니다.");
         } catch (Exception e) {
-            model.addAttribute("errorMessage", "상품 등록 중 에러가 발생하였습니다.");
-            return "item/itemForm";
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("상품 등록 중 에러가 발생하였습니다.");
         }
-
-        return "redirect:/";
     }
 
-    @GetMapping(value = "/admin/item/{itemId}")
-    public String itemDtl(@PathVariable("itemId") Long itemId, Model model) {
-
+    // 상품 상세 조회
+    @GetMapping("/admin/item/{itemId}")
+    public ResponseEntity<?> getItemDetails(@PathVariable("itemId") Long itemId) {
         try {
-            System.out.println("Fetching item with ID: " + itemId);
-            ItemFormDto itemFormDto = itemService.getItemDtl(itemId);   // 조회한 상품 데이터를 모델에 담아서 뷰로 전달
-            model.addAttribute("itemFormDto", itemFormDto);
+            ItemFormDto itemFormDto = itemService.getItemDtl(itemId);
+            Member seller = memberService.findMemberById(itemFormDto.getMemberId()); // 판매자 정보 조회
+            itemFormDto.setMemberId(seller.getId()); // 판매자 이름을 추가로 세팅
+            return ResponseEntity.ok(itemFormDto);
         } catch (EntityNotFoundException e) {
-            System.out.println("Item not found: " + e.getMessage());
-            model.addAttribute("errorMessage", "존제하지 않는 상품 입니다.");
-            model.addAttribute("itemFormDto", new ItemFormDto());
-            return "item/itemForm";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("존재하지 않는 상품입니다.");
         }
-
-        return "item/itemForm";
     }
 
-    @PostMapping(value = "/admin/item/{item_Id}")
-    public String itemUpdate(@Valid ItemFormDto itemFormDto, BindingResult bindingResult, Model model, @RequestParam("itemImgFile") List<MultipartFile> itemImgFileList) {
+    // 상품 업데이트
+    @PostMapping("/admin/item/{itemId}")
+    public ResponseEntity<?> updateItem(
+            @PathVariable("itemId") Long itemId,
+            @Valid @ModelAttribute ItemFormDto itemFormDto,
+            BindingResult bindingResult,
+            @RequestParam(value = "itemImgFile", required = false) List<MultipartFile> itemImgFileList) {
 
         if (bindingResult.hasErrors()) {
-            return "item/itemForm";
+            return ResponseEntity.badRequest().body(bindingResult.getAllErrors());
         }
 
+
+        if (itemId == null) {
+            return ResponseEntity.badRequest().body("업데이트할 상품의 ID가 제공되지 않았습니다.");
+        }
+
+        itemFormDto.setId(itemId);
+
+        // itemFormDto의 ID 값도 로그로 출력
+        System.out.println("itemFormDto.getId() 값: " + itemFormDto.getId());
+
+        // itemFormDto 값 확인
+        System.out.println("ItemFormDto 값: " + itemFormDto);
+
+        System.out.println("ItemImgId size : " + itemFormDto.getItemImgIds());
+
+        // 이미지 파일 리스트가 null이거나 비어있는지 확인
+        if (itemImgFileList == null || itemImgFileList.isEmpty()) {
+            return ResponseEntity.badRequest().body("이미지 파일이 제공되지 않았습니다.");
+        }
+
+        // 첫 번째 이미지가 비어 있는지 확인
         if (itemImgFileList.get(0).isEmpty() && itemFormDto.getId() == null) {
-            model.addAttribute("errorMessage", "첫번째 상품 이미지는 필수 입력값입니다.");
-            return "item/itemForm";
+            return ResponseEntity.badRequest().body("첫번째 상품 이미지는 필수 입력 값입니다.");
         }
 
         try {
             itemService.updateItem(itemFormDto, itemImgFileList);
+            return ResponseEntity.ok("상품이 성공적으로 업데이트되었습니다.");
         } catch (Exception e) {
-            model.addAttribute("errorMessage", "상품 수정 중 에러가 발생하였습니다.");
-            return "item/itemForm";
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("상품 수정 중 에러가 발생하였습니다.");
         }
-
-        return "redirect:/";
     }
 
-    // 상품 관리 화면 진입시 URL 에 페이지 번호가 없는 경우 페이지 번호가 있는 경우 2가지 매핑
-    @GetMapping(value = {"/admin/items", "/admin/items/{page}"})
-    public String itemManage(ItemSearchDto itemSearchDto, @PathVariable("page") Optional<Integer> page, Model model) {
-        Pageable pageable = PageRequest.of(page.isPresent() ? page.get() : 0,3);
 
+    // 상품 관리
+    @GetMapping({"/admin/items", "/admin/items/{page}"})
+    public ResponseEntity<?> getItems(
+            ItemSearchDto itemSearchDto,
+            @PathVariable(value = "page", required = false) Optional<Integer> page) {
+
+        Pageable pageable = PageRequest.of(page.orElse(0), 3);
         Page<Item> items = itemService.getAdminItemPage(itemSearchDto, pageable);
 
-        model.addAttribute("items", items);
-        model.addAttribute("itemService", itemSearchDto);
-        model.addAttribute("maxPage", 5);
-
-        return "item/itemMng";
+        return ResponseEntity.ok(Map.of(
+                "items", items.getContent(),
+                "totalPages", items.getTotalPages(),
+                "totalElements", items.getTotalElements(),
+                "currentPage", items.getNumber()
+        ));
     }
 
-    @GetMapping(value = "/item/{itemId}")
-    public String itemDtl(Model model, @PathVariable("itemId") Long itemId) {
-        ItemFormDto itemFormDto = itemService.getItemDtl(itemId);
-        model.addAttribute("item", itemFormDto);
-        return "item/itemDtl";
+    // 상품 상세 조회 페이지
+    @GetMapping("/item/{itemId}")
+    public ResponseEntity<?> getItemDetailsPage(@PathVariable("itemId") Long itemId) {
+        try {
+            ItemFormDto itemFormDto = itemService.getItemDtl(itemId);
+            return ResponseEntity.ok(itemFormDto);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("존재하지 않는 상품입니다.");
+        }
     }
 
-
-
-
+    // 상품 삭제
+    @PostMapping("/admin/item/delete/{itemId}")
+    public ResponseEntity<Void> deleteItem(@PathVariable("itemId") Long itemId) {
+        try {
+            itemService.deleteitem(itemId);
+            return ResponseEntity.noContent().build();
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }

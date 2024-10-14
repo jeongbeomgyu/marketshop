@@ -27,6 +27,6 @@ Querydsl
 
 #API
 ---
-Swagger V3 (Springdoc) (예정)
+Swagger V3 (Springdoc)
 
 http://localhost:8080/swagger-ui/index.html
