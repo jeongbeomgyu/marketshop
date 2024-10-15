@@ -64,6 +64,7 @@ public class ItemFormDto {
                 ", itemCategory='" + itemCategory + '\'' +
                 ", itemImgDtoList=" + itemImgDtoList +
                 ", itemImgIds=" + itemImgIds +
+                ", memberId=" + memberId +   // memberId 추가
                 '}';
     }
 
