@@ -19,6 +19,8 @@ public class WebChatConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
 
-        registry.addHandler(myHandler,"/ws/{roomId}/{userNumber}");
+        registry.addHandler(myHandler,"/ws/{roomId}/{userNumber}")
+                .setAllowedOrigins("*");  // 모든 도메인에서 허용
+        ;
     }
 }
