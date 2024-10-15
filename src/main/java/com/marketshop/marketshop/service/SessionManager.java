@@ -1,11 +1,13 @@
 package com.marketshop.marketshop.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @Service
 public class SessionManager {
 
@@ -42,11 +44,29 @@ public class SessionManager {
         return session;
     }
 
+
     public void removeSession(Long roomId, Long userNumber){
+        Map<Long, WebSocketSession> chatRoomSessions = roomList.get(roomId);
 
-        roomList.get(roomId).remove(userNumber);
+        if (chatRoomSessions == null) {
+            log.warn("roomId {}에 대한 세션 정보가 없습니다.", roomId);
+            return;  // 해당 roomId에 대한 세션이 없으면 바로 반환
+        }
 
+        chatRoomSessions.remove(userNumber);
 
+        // 세션이 모두 제거된 경우 해당 roomId 자체를 roomList에서 제거할 수 있음
+        if (chatRoomSessions.isEmpty()) {
+            roomList.remove(roomId);
+            log.info("roomId {}가 모두 제거되었습니다.", roomId);
+        }
     }
+
+//    public void removeSession(Long roomId, Long userNumber){
+//
+//        roomList.get(roomId).remove(userNumber);
+//
+//
+//    }
 
 }
