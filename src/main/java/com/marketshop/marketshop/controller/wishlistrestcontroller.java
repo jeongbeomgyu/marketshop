@@ -1,6 +1,6 @@
 package com.marketshop.marketshop.controller;
 
-import com.marketshop.marketshop.entity.Item;
+import com.marketshop.marketshop.service.WishlistItemResponse;
 import com.marketshop.marketshop.service.WishlistResponse;
 import com.marketshop.marketshop.service.WishlistService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,19 +13,23 @@ import java.util.List;
 @RestController
 @RequestMapping("/wishlist")
 public class wishlistrestcontroller {
-    @Autowired
-    WishlistService wishlistService;
 
+    @Autowired
+    private WishlistService wishlistService;
+
+    // 찜 목록에 아이템 추가/제거
     @PostMapping("/add")
-    public ResponseEntity<WishlistResponse<String>> addwishlist(@RequestParam Long memberId, @RequestParam Long itemId) {
+    public ResponseEntity<WishlistResponse<String>> addWishlist(
+            @RequestParam("memberId") Long memberId,
+            @RequestParam("itemId") Long itemId) {
         String message = wishlistService.toggleWishlist(memberId, itemId);
         return new ResponseEntity<>(new WishlistResponse<>(message, null), HttpStatus.OK);
     }
-    @GetMapping("/user/{memberId}")
-    public ResponseEntity<WishlistResponse<List<Item>>> getuserwishlist(@PathVariable Long memberId){
-        List<Item> wishlist = wishlistService.getWishllist(memberId);
-        System.out.println(wishlistService.getWishllist(4L));
-        return new ResponseEntity<>(new WishlistResponse<>( "찜 목록", wishlist), HttpStatus.OK);
-    }
 
+    // 특정 회원의 찜 목록 조회
+    @GetMapping("/user")
+    public ResponseEntity<WishlistResponse<List<WishlistItemResponse>>> getUserWishlist(@RequestParam("memberId") Long memberId) {
+        List<WishlistItemResponse> wishlist = wishlistService.getWishlist(memberId);
+        return new ResponseEntity<>(new WishlistResponse<>("찜 목록", wishlist), HttpStatus.OK);
+    }
 }
