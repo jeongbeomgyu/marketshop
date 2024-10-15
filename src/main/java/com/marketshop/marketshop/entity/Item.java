@@ -90,6 +90,7 @@ public class Item extends BaseEntity{
     @OneToMany(mappedBy = "item", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Wishlist> wishlistItems = new HashSet<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "item", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ItemImg> productThumbnails = new ArrayList<>();
 }
