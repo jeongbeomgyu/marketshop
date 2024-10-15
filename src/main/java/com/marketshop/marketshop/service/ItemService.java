@@ -140,8 +140,31 @@ public class ItemService {
     }
 
     @Transactional(readOnly = true)
-    public List<Item> getItemsByUser(Long userId) {
-        return itemRepository.findByMemberId(userId); // 사용자의 아이템만 필터링하여 조회
+    public List<ItemFormDto> getItemsByUser(Long userId) {
+        // 사용자의 아이템 목록을 조회
+        List<Item> items = itemRepository.findByMemberId(userId);
+
+        // ItemFormDto 목록으로 변환
+        List<ItemFormDto> itemFormDtoList = new ArrayList<>();
+
+        for (Item item : items) {
+            // 아이템의 이미지 목록 조회
+            List<ItemImg> itemImgList = itemImgRepository.findByItemIdOrderByIdAsc(item.getId());
+            List<ItemImgDto> itemImgDtoList = new ArrayList<>();
+
+            for (ItemImg itemImg : itemImgList) {
+                // 이미지 정보 DTO로 변환
+                itemImgDtoList.add(ItemImgDto.of(itemImg));
+            }
+
+            // 아이템 정보를 DTO로 변환
+            ItemFormDto itemFormDto = ItemFormDto.of(item);
+            itemFormDto.setItemImgDtoList(itemImgDtoList); // 이미지 정보 설정
+
+            itemFormDtoList.add(itemFormDto);
+        }
+
+        return itemFormDtoList;
     }
 
 }
