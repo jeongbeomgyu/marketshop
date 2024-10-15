@@ -167,7 +167,7 @@ public class ItemController {
             return ResponseEntity.internalServerError().build();
         }
     }
-
+    // 사용자별로 아이템 목록 조회
     @GetMapping("/user/items")
     public ResponseEntity<?> getUserItems(Principal principal) {
         if (principal == null) {
