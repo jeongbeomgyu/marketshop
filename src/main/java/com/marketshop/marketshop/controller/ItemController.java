@@ -167,4 +167,19 @@ public class ItemController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    // 사용자별로 아이템 목록 조회
+    @GetMapping("/user/items")
+    public ResponseEntity<?> getUserItems(Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
+        }
+
+        String userEmail = principal.getName(); // 로그인된 사용자 이메일 가져오기
+        Member member = memberService.findByEmail(userEmail); // 사용자의 회원 정보 가져오기
+
+        List<Item> items = itemService.getItemsByUser(member.getId()); // 사용자 ID로 아이템 필터링
+        return ResponseEntity.ok(items); // 사용자 아이템 목록 반환
+    }
+
 }

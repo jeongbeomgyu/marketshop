@@ -139,4 +139,9 @@ public class ItemService {
         itemRepository.delete(item);
     }
 
+    @Transactional(readOnly = true)
+    public List<Item> getItemsByUser(Long userId) {
+        return itemRepository.findByMemberId(userId); // 사용자의 아이템만 필터링하여 조회
+    }
+
 }

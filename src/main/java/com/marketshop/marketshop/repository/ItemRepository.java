@@ -15,6 +15,9 @@ public interface ItemRepository extends JpaRepository<Item, Long>, QuerydslPredi
     List<Item> findByPriceLessThan(Integer price);
     List<Item> findByPriceLessThanOrderByPriceDesc(Integer price);
 
+    // 특정 사용자가 등록한 아이템 목록 조회
+    List<Item> findByMemberId(Long memberId);
+
     // 고정된 Sql 이 아닌 동적쿼리 생성해야함 -> Querydsl 사용
     // Query 를 이용해 검색 처리 -> Querydsl 사용
     // @Query 어노테이션 안에 JPQL 로 작성한 쿼리문을 넣어줌
