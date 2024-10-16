@@ -63,6 +63,7 @@ public class SecurityConfig {
                         // Swagger 관련 URL들은 인증 없이 접근 허용
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/", "/members/**", "/item/**", "/images/**", "/mail/**", "/search/**","/error").permitAll()
+                        .requestMatchers("/ws/**").permitAll()  // WebSocket 경로를 허용
                         .requestMatchers("/chat/**").authenticated()// 이 경로는 인증된 사용자만 허용
                         .requestMatchers("/admin/**").hasRole("USER") // ADMIN 권한을 가진 사용자만 접근 가능
                         .anyRequest().authenticated() // 그 외 모든 요청은 인증 필요
