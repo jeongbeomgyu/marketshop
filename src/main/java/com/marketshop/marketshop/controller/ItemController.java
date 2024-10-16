@@ -181,10 +181,16 @@ public class ItemController {
         return ResponseEntity.ok(items); // 사용자 아이템 목록 반환
     }
     @GetMapping("/seller")
-    @ResponseBody
     public ResponseEntity<List<ItemFormDto>> getSellerItems(@RequestParam("memberId") Long memberId) {
         List<ItemFormDto> items = itemService.findItemsByMemberId(memberId); // 서비스에서 아이템 리스트 조회
         return ResponseEntity.ok(items); // 조회한 아이템 리스트를 JSON 형태로 반환
+    }
+
+    @GetMapping("/seller/soldout")
+    @ResponseBody
+    public ResponseEntity<List<ItemFormDto>> getSoldOutItems(@RequestParam("memberId") Long memberId) {
+        List<ItemFormDto> soldOutItems = itemService.findSoldOutItemsByMemberId(memberId);
+        return ResponseEntity.ok(soldOutItems);
     }
 
 

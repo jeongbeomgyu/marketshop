@@ -198,5 +198,21 @@ public class ItemService {
                 .collect(Collectors.toList());
     }
 
+    public List<ItemFormDto> findSoldOutItemsByMemberId(Long memberId) {
+        List<Item> soldOutItems = itemRepository.findByMemberIdAndItemSellStatus(memberId, ItemSellStatus.SOLD_OUT);
+
+        return soldOutItems.stream()
+                .map(item -> {
+                    ItemFormDto itemFormDto = ItemFormDto.of(item); // 기본 정보를 매핑
+                    // Item의 이미지 정보를 매핑
+                    List<ItemImgDto> itemImgDtoList = item.getProductThumbnails().stream()
+                            .map(ItemImgDto::of)
+                            .collect(Collectors.toList());
+                    itemFormDto.setItemImgDtoList(itemImgDtoList); // 이미지 리스트 설정
+                    return itemFormDto;
+                })
+                .collect(Collectors.toList());
+    }
+
 
 }
