@@ -32,7 +32,7 @@ public class ChatRoom {
     @JoinColumn( name = "userNumber2")
     private Member user2;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "item_id")
     private Item item;
 
