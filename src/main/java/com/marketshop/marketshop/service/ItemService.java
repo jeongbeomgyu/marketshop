@@ -1,5 +1,6 @@
 package com.marketshop.marketshop.service;
 
+import com.marketshop.marketshop.constant.ItemSellStatus;
 import com.marketshop.marketshop.dto.ItemFormDto;
 import com.marketshop.marketshop.dto.ItemImgDto;
 import com.marketshop.marketshop.dto.ItemSearchDto;
@@ -33,6 +34,8 @@ public class ItemService {
 
     private final MemberService memberService;
 
+
+
     public Long saveItem(ItemFormDto itemFormDto, List<MultipartFile> itemImgFileList, String memberEmail) throws Exception {
         // 이메일로 인증된 회원을 가져옴
         Member member = memberService.findByEmail(memberEmail); // 회원을 직접 반환
@@ -58,6 +61,11 @@ public class ItemService {
             ItemImg savedItemImg = itemImgService.saveItemImg(itemImg, itemImgFile);
             itemFormDto.getItemImgIds().add(savedItemImg.getId());  // saveItemImg에서 반환된 ID 추가
         }
+
+        if (item.getStockNumber() == 0) {
+            item.setItemSellStatus(ItemSellStatus.SOLD_OUT);
+        }
+        itemRepository.save(item);
 
         return item.getId();
     }
@@ -114,6 +122,11 @@ public class ItemService {
         for (int i = 0; i < itemImgFileList.size(); i++) {
             itemImgService.updateItemImg(itemImgIds.get(i), itemImgFileList.get(i));
         }
+
+        if (item.getStockNumber() == 0) {
+            item.setItemSellStatus(ItemSellStatus.SOLD_OUT);
+        }
+        itemRepository.save(item);
 
         return item.getId();
     }
