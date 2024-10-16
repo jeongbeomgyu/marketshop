@@ -7,6 +7,7 @@ import com.marketshop.marketshop.repository.ChatMessageRepository;
 import com.marketshop.marketshop.repository.ChatRoomRepository;
 import com.marketshop.marketshop.repository.MemberRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -34,6 +35,9 @@ public class ChatMessageService {
     public ChatMessage saveMessage(Long roomId, Long senderId, String content) {
         ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new EntityNotFoundException("ChatRoom not found"));
         Member sender = userRepository.findById(senderId).orElseThrow(() -> new EntityNotFoundException("Sender not found"));
+
+        // 명시적으로 Item 초기화
+        Hibernate.initialize(chatRoom.getItem());
 
         ChatMessage chatMessage = new ChatMessage(chatRoom, sender, content, LocalDateTime.now());
         return chatMessageRepository.save(chatMessage);
