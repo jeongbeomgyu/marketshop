@@ -49,24 +49,28 @@ public class MyHandler extends TextWebSocketHandler {
     // 소켓 연결이 완료됐을 때 실행되는 메서드
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-
-
         log.info("연결완료");
 
-        // WebSocket handshake request에서 Authorization 헤더 추출
-        String token = session.getHandshakeHeaders().getFirst("Authorization");
-        if (token != null && token.startsWith("Bearer ")) {
-            token = token.substring(7); // "Bearer " 부분을 제거하여 실제 토큰만 남김
-        } else {
+        // URI에서 쿼리스트링 추출
+        String query = session.getUri().getQuery();
+        if (query == null || !query.contains("token=")) {
             log.error("JWT 토큰이 존재하지 않음");
             session.close(CloseStatus.BAD_DATA); // 잘못된 요청으로 소켓을 닫음
+            return;
+        }
+
+        // 토큰 추출
+        String token = query.split("token=")[1];
+        if (token == null || token.isEmpty()) {
+            log.error("JWT 토큰이 존재하지 않음");
+            session.close(CloseStatus.BAD_DATA);
             return;
         }
 
         // JWT 토큰 검증
         if (!jwtTokenProvider.validateToken(token)) {
             log.error("JWT 토큰이 유효하지 않음");
-            session.close(CloseStatus.BAD_DATA); // 잘못된 요청으로 소켓을 닫음
+            session.close(CloseStatus.BAD_DATA);
             return;
         }
 
@@ -93,7 +97,6 @@ public class MyHandler extends TextWebSocketHandler {
 
         // 세션 추가
         sessionManager.addSession(roomId, userNumber, session);
-
     }
 
     // 소켓 연결이 완료됐을 때 실행되는 메서드
@@ -114,51 +117,65 @@ public class MyHandler extends TextWebSocketHandler {
 //    }
 
 
-    @Override
-    public void handleTextMessage(WebSocketSession session, TextMessage message) {
-
+    public void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
 
         String type = "";  // 전송된 메시지의 타입.
-        JSONObject jsonObject = null;
-        JSONParser jsonParser = new JSONParser();
         ObjectMapper objectMapper = new ObjectMapper();
-
         objectMapper.registerModule(new JavaTimeModule());
-        String str = session.getUri().getPath().substring((session.getId().lastIndexOf("/")) + 5);
-        System.out.println("str = " + str);
 
-        Long roomId = Long.parseLong(str.split("/")[0]);
-        Long userNumber = Long.parseLong(str.split("/")[1]);
+        // URI에서 roomId와 userNumber 추출
+        String path = session.getUri().getPath();
+        String[] segments = path.split("/");
+
+        if (segments.length < 4) {
+            log.error("URI 형식이 잘못되었습니다: {}", path);
+            session.close(CloseStatus.BAD_DATA);  // 잘못된 요청이므로 세션 닫기
+            return;
+        }
+
+        Long roomId = Long.parseLong(segments[2]);
+        Long userNumber = Long.parseLong(segments[3]);
 
         WebSocketSession yourSession = sessionManager.getSession(roomId, userNumber);
 
-
         try {
+            // 메시지 파싱 (Jackson의 ObjectMapper 사용)
+            log.info("수신된 메시지 payload: {}", message.getPayload());
+            Map<String, Object> jsonMessage = objectMapper.readValue(message.getPayload(), Map.class);
 
-            type = (String) ((JSONObject) jsonParser.parse(message.getPayload())).get("type");
-
-            if (type.equals("close")) { // 소켓 종료 알림시 세션 제거후 바로 메서드 종료.
+            // 메시지 타입 확인
+            type = (String) jsonMessage.get("type");
+            if ("close".equals(type)) { // 소켓 종료 알림 시 세션 제거 후 종료
                 sessionManager.removeSession(roomId, userNumber);
                 return;
             }
 
-            jsonObject = (JSONObject) jsonParser.parse(message.getPayload());
-
-            String content = (String) jsonObject.get("content");
-            ChatMessage chatMessage = chatMessageService.saveMessage(roomId, userNumber, content);// 저장 한 후의 message content를 가지고 온다.
-            String parseSendMessage = "";
-            parseSendMessage = objectMapper.writeValueAsString(chatMessage);
-
-            jsonObject.put("message", parseSendMessage);
-
-            if (yourSession != null) {
-                yourSession.sendMessage(new TextMessage(jsonObject.toJSONString()));
+            // 메시지 내용 처리
+            String content = (String) jsonMessage.get("content");
+            if (content == null || content.isEmpty()) {
+                log.error("메시지 내용이 비어있습니다.");
+                session.close(CloseStatus.BAD_DATA);
+                return;
             }
 
-        } catch (ParseException e) {
-            throw new RuntimeException(e);
+            // 메시지 저장
+            ChatMessage chatMessage = chatMessageService.saveMessage(roomId, userNumber, content);
+            String parseSendMessage = objectMapper.writeValueAsString(chatMessage);
+
+            // 응답 메시지 구성
+            jsonMessage.put("message", parseSendMessage);
+
+            // 상대방에게 메시지 전송
+            if (yourSession != null) {
+                yourSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(jsonMessage)));
+            }
+
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            log.error("메시지 파싱 오류", e);
+            session.close(CloseStatus.BAD_DATA);
+        } catch (Exception e) {
+            log.error("예기치 않은 오류 발생", e);
+            session.close(CloseStatus.SERVER_ERROR);
         }
     }
 
