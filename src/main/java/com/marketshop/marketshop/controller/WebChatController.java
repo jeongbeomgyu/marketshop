@@ -24,10 +24,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -172,6 +169,27 @@ public class WebChatController {
         ChatRoomDto chatRoomDto = ChatRoomDto.fromEntity(chatRoom);
         return ResponseEntity.ok(chatRoomDto);
     }//10.17
+
+    @GetMapping("/chat/rooms")
+    public ResponseEntity<List<ChatRoomDto>> getUserChatRooms(Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        // 로그인된 사용자의 이메일을 기반으로 회원 정보 조회
+        String userEmail = principal.getName();
+        Member member = userService.findByEmail(userEmail);
+
+        // 해당 사용자가 참여 중인 채팅방 리스트 조회
+        List<ChatRoom> chatRooms = chatRoomService.getChatRoomList(member.getId());
+
+        // ChatRoom 엔티티 리스트를 DTO 리스트로 변환
+        List<ChatRoomDto> chatRoomDtos = chatRooms.stream()
+                .map(ChatRoomDto::fromEntity)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(chatRoomDtos);
+    }
 
 //    @PostMapping("/getUserNumber")
 //    @ResponseBody
