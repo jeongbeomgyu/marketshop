@@ -71,23 +71,37 @@ public class WebChatController {
     @Operation(summary = "메시지 전송", description = "특정 채팅방에 메시지를 전송합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "메시지 전송 성공"),
-            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자")
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
+            @ApiResponse(responseCode = "403", description = "해당 채팅방에 접근할 수 없음")
     })
     @PostMapping("/chat/{roomId}/message")
     public ResponseEntity<ChatMessageDto> sendMessage(
             @PathVariable("roomId") Long roomId,
             @RequestBody String content,
             Principal principal) {
+
         if (principal == null) {
             log.error("Principal is null, user not authenticated.");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
         }
 
-        log.info("Authenticated user: {}", principal.getName()); // 사용자 이메일 로그 추가
+        String userEmail = principal.getName();
+        log.info("Authenticated user: {}", userEmail); // 사용자 이메일 로그 추가
 
-        String userEmail = principal.getName();  // 이메일로 사용자 확인
         Member member = userService.findByEmail(userEmail);
         Long senderId = member.getId();
+
+        // 채팅방 가져오기
+        ChatRoom chatRoom = chatRoomService.getChatRoomByRoomId(roomId);
+        if (chatRoom == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null); // 채팅방을 찾을 수 없음
+        }
+
+        // 채팅방 접근 권한 확인 (user1 또는 user2가 아니라면 403 Forbidden 응답)
+        if (!chatRoom.getUser1().getId().equals(senderId) && !chatRoom.getUser2().getId().equals(senderId)) {
+            log.error("User {} is not allowed to send messages to room {}", userEmail, roomId);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null); // 접근 권한이 없음
+        }
 
         // 메시지 저장
         ChatMessage message = chatMessageService.saveMessage(roomId, senderId, content);
@@ -100,10 +114,35 @@ public class WebChatController {
     // 특정 채팅방의 모든 메시지 조회
     @Operation(summary = "채팅방의 모든 메시지 조회", description = "특정 채팅방에 있는 모든 메시지를 조회합니다.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "메시지 조회 성공")
+            @ApiResponse(responseCode = "200", description = "메시지 조회 성공"),
+            @ApiResponse(responseCode = "403", description = "해당 채팅방에 접근할 수 없음")
     })
     @GetMapping("/chat/{roomId}/messages")
-    public ResponseEntity<List<ChatMessageDto>> getAllMessagesInRoom(@PathVariable("roomId") Long roomId) {
+    public ResponseEntity<List<ChatMessageDto>> getAllMessagesInRoom(@PathVariable("roomId") Long roomId, Principal principal) {
+
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String userEmail = principal.getName();
+        log.info("Authenticated user: {}", userEmail); // 사용자 이메일 로그 추가
+
+        Member member = userService.findByEmail(userEmail);
+        Long userId = member.getId();
+
+        // 채팅방 가져오기
+        ChatRoom chatRoom = chatRoomService.getChatRoomByRoomId(roomId);
+        if (chatRoom == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null); // 채팅방을 찾을 수 없음
+        }
+
+        // 채팅방 접근 권한 확인 (user1 또는 user2가 아니라면 403 Forbidden 응답)
+        if (!chatRoom.getUser1().getId().equals(userId) && !chatRoom.getUser2().getId().equals(userId)) {
+            log.error("User {} is not allowed to view messages in room {}", userEmail, roomId);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null); // 접근 권한이 없음
+        }
+
+        // 메시지 조회
         List<ChatMessage> messages = chatMessageService.getAllMessagesInRoom(roomId);
         List<ChatMessageDto> messageDtos = messages.stream()
                 .map(ChatMessageDto::new)  // 메시지를 DTO로 변환
@@ -111,6 +150,28 @@ public class WebChatController {
         return ResponseEntity.ok(messageDtos);
     }
 
+    // roomId로 채팅방 검색 및 입장
+    @PostMapping("/room/{roomId}")
+    public ResponseEntity<ChatRoomDto> getChatRoomById(@PathVariable("roomId") Long roomId, Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String userEmail = principal.getName();  // 로그인된 사용자의 이메일 확인
+        Member member = userService.findByEmail(userEmail);
+
+        // 채팅방 검색
+        ChatRoom chatRoom = chatRoomService.getChatRoomByRoomId(roomId);
+
+        // 채팅방이 존재하지 않거나 사용자가 채팅방에 속하지 않은 경우
+        if (chatRoom == null || !chatRoom.isParticipant(member)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        // ChatRoom 엔티티를 ChatRoomDto로 변환하여 반환
+        ChatRoomDto chatRoomDto = ChatRoomDto.fromEntity(chatRoom);
+        return ResponseEntity.ok(chatRoomDto);
+    }//10.17
 
 //    @PostMapping("/getUserNumber")
 //    @ResponseBody
