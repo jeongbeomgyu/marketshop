@@ -29,10 +29,19 @@ public class ChatRoomService {
 
     // 채팅방 생성 또는 기존 방 가져오기
     public ChatRoom createOrGetChatRoom(Long itemId, Long user2Id) {
-        Item item = itemRepository.findById(itemId).orElseThrow(() -> new EntityNotFoundException("Item not found"));
+        // 아이템 조회 및 판매자 정보 가져오기
+        Item item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new EntityNotFoundException("Item not found"));
         Member user1 = item.getMember(); // 상품을 등록한 판매자
-        Member user2 = userRepository.findById(user2Id).orElseThrow(() -> new EntityNotFoundException("Buyer not found"));
+        Member user2 = userRepository.findById(user2Id)
+                .orElseThrow(() -> new EntityNotFoundException("Buyer not found"));
 
+        // 판매자가 본인 아이템에 대해 채팅방을 생성하려고 할 경우 예외 발생
+        if (user1.getId().equals(user2.getId())) {
+            throw new IllegalArgumentException("You cannot create a chat room for your own item.");
+        }
+
+        // 채팅방이 이미 존재하는지 확인
         ChatRoom chatRoom = chatRoomRepository.findByUser1AndUser2AndItem(user1, user2, item);
 
         // 이미 존재하는 방이 없다면 생성
@@ -40,6 +49,7 @@ public class ChatRoomService {
             chatRoom = ChatRoom.createChatRoom(user1, user2, item);
             chatRoomRepository.save(chatRoom);
         }
+
         return chatRoom;
     }
 
