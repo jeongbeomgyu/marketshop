@@ -1,5 +1,6 @@
 package com.marketshop.marketshop.repository;
 
+import com.marketshop.marketshop.constant.ItemSellStatus;
 import com.marketshop.marketshop.entity.Item;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -24,4 +25,7 @@ public interface ItemRepository extends JpaRepository<Item, Long>, QuerydslPredi
     @Query(value = "select i form Item i where i.itemDetail like %:itemDetail% order by i.price desc", nativeQuery = true)
     // 파라미터 @Param 어노테이션을 이용해 파라미터로 넘어온 값을 JPQL 에 들어갈 변수로 지정해줬음
     List<Item> findByItemDetail(@Param("itemDetail") String itemDetail);
+
+    List<Item> findByMemberIdAndItemSellStatus(Long memberId, ItemSellStatus itemSellStatus);
+
 }

@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -179,5 +180,39 @@ public class ItemService {
 
         return itemFormDtoList;
     }
+    public List<ItemFormDto> findItemsByMemberId(Long memberId) {
+        // memberId로 아이템을 조회
+        List<Item> items = itemRepository.findByMemberId(memberId);
+        // 조회한 아이템을 DTO로 변환
+        return items.stream()
+                .map(item -> {
+                    ItemFormDto itemFormDto = ItemFormDto.of(item);
+                    // 각 아이템의 이미지 정보를 DTO로 변환하여 리스트에 추가
+                    List<ItemImgDto> itemImgDtos = item.getProductThumbnails()
+                            .stream()
+                            .map(ItemImgDto::of)
+                            .collect(Collectors.toList());
+                    itemFormDto.setItemImgDtoList(itemImgDtos);
+                    return itemFormDto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    public List<ItemFormDto> findSoldOutItemsByMemberId(Long memberId) {
+        List<Item> soldOutItems = itemRepository.findByMemberIdAndItemSellStatus(memberId, ItemSellStatus.SOLD_OUT);
+
+        return soldOutItems.stream()
+                .map(item -> {
+                    ItemFormDto itemFormDto = ItemFormDto.of(item); // 기본 정보를 매핑
+                    // Item의 이미지 정보를 매핑
+                    List<ItemImgDto> itemImgDtoList = item.getProductThumbnails().stream()
+                            .map(ItemImgDto::of)
+                            .collect(Collectors.toList());
+                    itemFormDto.setItemImgDtoList(itemImgDtoList); // 이미지 리스트 설정
+                    return itemFormDto;
+                })
+                .collect(Collectors.toList());
+    }
+
 
 }

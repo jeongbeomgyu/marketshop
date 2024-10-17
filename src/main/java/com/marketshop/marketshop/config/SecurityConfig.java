@@ -62,7 +62,7 @@ public class SecurityConfig {
                         .requestMatchers("/css/**", "/js/**", "/img/**").permitAll() // 정적 리소스 허용
                         // Swagger 관련 URL들은 인증 없이 접근 허용
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/", "/members/**", "/item/**", "/images/**", "/mail/**", "/search/**","/error").permitAll()
+                        .requestMatchers("/", "/members/**", "/item/**", "/images/**", "/mail/**", "/search/**","/error","wishlist/**", "seller/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()  // WebSocket 경로를 허용
                         .requestMatchers("/chat/**").authenticated()// 이 경로는 인증된 사용자만 허용
                         .requestMatchers("/admin/**").hasRole("USER") // ADMIN 권한을 가진 사용자만 접근 가능
