@@ -48,4 +48,8 @@ public class ChatRoom {
                 .item(item)
                 .build();
     }
+
+    public boolean isParticipant(Member member) {
+        return this.user1.equals(member) || this.user2.equals(member);
+    }
 }
