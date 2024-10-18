@@ -13,6 +13,7 @@ import com.marketshop.marketshop.service.MailService;
 import com.marketshop.marketshop.service.MemberService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +35,7 @@ import java.util.Objects;
 
 import static com.marketshop.marketshop.constant.Role.*;
 
+@Slf4j
 @RequestMapping("/members")
 @RestController
 @RequiredArgsConstructor
@@ -99,19 +101,33 @@ public class MemberController {
 //        return "/member/memberLoginForm";
 //    }
 
-    // React 와 연동 가능하도록 회원 로그인 처리
     @PostMapping(value = "/login", produces = "application/json")
     public ResponseEntity<?> loginMember(@RequestBody LoginRequest loginRequest) {
         try {
             // 로그인 로직 처리 (인증 처리)
             UserDetails userDetails = memberService.authenticateUser(loginRequest);
 
-            // JWT 토큰 생성
-            String token = jwtTokenProvider.generateToken(userDetails.getUsername());
+            // UserDetails에서 이메일 추출
+            String email = userDetails.getUsername();
 
-            // 응답으로 JWT 토큰 반환
-            return ResponseEntity.ok().body(Map.of("token", token));
+            // 이메일을 통해 Member 객체 조회
+            Member member = memberService.findByEmail(email);
+            Long memberId = member.getId();  // Member의 ID 추출
+
+            // memberId 로그 기록
+            log.info("Login request by memberId: {}", memberId);
+
+            // JWT 토큰 생성
+            String token = jwtTokenProvider.generateToken(member.getEmail());
+
+            // 응답으로 JWT 토큰 및 memberId 반환
+            return ResponseEntity.ok().body(Map.of(
+                    "token", token,
+                    "memberId", memberId
+            ));
         } catch (Exception e) {
+            // 인증 실패 시 에러 처리
+            log.error("Login failed for email: {}", loginRequest.getEmail(), e);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
         }
     }
