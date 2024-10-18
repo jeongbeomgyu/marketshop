@@ -220,15 +220,19 @@ public class MyHandler extends TextWebSocketHandler {
             responseMessage.put("roomId", roomId);
             responseMessage.put("sendTime", chatMessage.getSendTime());
 
-            // 모든 사용자에게 메시지 전송 (자신 포함)
-            List<WebSocketSession> sessionsInRoom = sessionManager.getAllSessionsInRoom(roomId);
-            for (WebSocketSession userSession : sessionsInRoom) {
-                if (userSession != null && userSession.isOpen()) {
-                    log.info("세션 {}에 메시지 전송", userSession.getId());
-                    userSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(responseMessage)));
+            // 현재 사용자를 제외한 상대방 ID 가져오기
+            Long receiverId = sessionManager.getOtherUserIdInRoom(roomId, senderId);
+            if (receiverId != null) {
+                WebSocketSession receiverSession = sessionManager.getSession(roomId, receiverId);
+                if (receiverSession != null && receiverSession.isOpen()) {
+                    // 상대방에게 메시지 전송
+                    log.info("세션 {}에 메시지 전송", receiverSession.getId());
+                    receiverSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(responseMessage)));
                 } else {
-                    log.warn("세션이 닫혀있거나 존재하지 않습니다: {}", userSession != null ? userSession.getId() : "null");
+                    log.warn("상대방의 세션이 닫혀있거나 존재하지 않습니다.");
                 }
+            } else {
+                log.warn("상대방이 채팅방에 존재하지 않습니다.");
             }
 
         } catch (IOException e) {
