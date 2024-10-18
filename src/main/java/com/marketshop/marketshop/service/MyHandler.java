@@ -215,6 +215,7 @@ public class MyHandler extends TextWebSocketHandler {
             // 응답 메시지 구성
             Map<String, Object> responseMessage = new HashMap<>();
             responseMessage.put("sender", sender.getName());
+            responseMessage.put("senderId", senderId); // senderId 포함
             responseMessage.put("messageId", chatMessage.getMessageId());
             responseMessage.put("content", chatMessage.getContent());
             responseMessage.put("roomId", roomId);
